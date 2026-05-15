@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f8;
+        padding: 16px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 14px;
+        padding: 18px;
+        max-width: 480px;
+        margin: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+
+      h2 {
+        margin-top: 0;
+        color: #0f5132;
+        text-align: center;
+      }
+
+      label {
+        display: block;
+        margin-top: 12px;
+        font-weight: bold;
+      }
+
+      input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        margin-top: 6px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 15px;
+      }
+
+      textarea {
+        min-height: 80px;
+      }
+
+      button {
+        width: 100%;
+        margin-top: 18px;
+        padding: 13px;
+        background: #0f6b3a;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 17px;
+        font-weight: bold;
+      }
+
+      button:disabled {
+        background: #999;
+      }
+
+      .msg {
+        margin-top: 14px;
+        text-align: center;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="card">
+      <h2>ฟอร์มขอ OT</h2>
+
+      <form id="otForm">
+        <input type="hidden" name="line_user_id" id="line_user_id">
+
+        <label>รหัสพนักงาน</label>
+        <input type="text" name="emp_id" required placeholder="เช่น EMP001">
+
+        <label>ชื่อพนักงาน</label>
+        <input type="text" name="emp_name" required placeholder="ชื่อ - นามสกุล">
+
+        <label>แผนก</label>
+        <input type="text" name="department" required placeholder="เช่น ผลิต / บัญชี / HR">
+
+        <label>วันที่ทำ OT</label>
+        <input type="date" name="ot_date" required>
+
+        <label>เวลาเริ่ม</label>
+        <input type="time" name="start_time" required>
+
+        <label>เวลาสิ้นสุด</label>
+        <input type="time" name="end_time" required>
+
+        <label>ประเภท OT</label>
+        <select name="ot_type" required>
+          <option value="">เลือกประเภท OT</option>
+          <option value="ทำงานวันปกติ">ทำงานวันปกติ</option>
+          <option value="ทำงานวันหยุด">ทำงานวันหยุด</option>
+          <option value="ทำงานวันหยุดนักขัตฤกษ์">ทำงานวันหยุดนักขัตฤกษ์</option>
+        </select>
+
+        <label>เหตุผล</label>
+        <textarea name="reason" required placeholder="เช่น งานไม่เสร็จ / งานเร่งด่วน"></textarea>
+
+        <button type="submit" id="submitBtn" disabled>กำลังเชื่อมต่อ LINE...</button>
+      </form>
+
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <script>
+      // ===== ตั้งค่าตรงนี้ =====
+      const LIFF_ID = '2010095116-04eFOC0l';
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycbyY8OvuqzK7XWHVezZ_81ctVMklPHFLXJ576d-6E4Waa0ZykKsKjIxLdTdDt4Y_82Do/exec';
+      // =========================
+
+      const form = document.getElementById('otForm');
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('msg');
+      const lineUserInput = document.getElementById('line_user_id');
+
+      msg.style.color = 'blue';
+      msg.innerText = 'กำลังเชื่อมต่อ LINE...';
+
+      setTimeout(function() {
+        if (btn.disabled) {
+          lineUserInput.value = 'NO_LINE_USER_ID';
+          btn.disabled = false;
+          btn.innerText = 'ส่งคำขอ OT';
+          msg.style.color = 'orange';
+          msg.innerText = 'LIFF ใช้เวลานานเกินไป แต่สามารถส่งคำขอได้';
+        }
+      }, 5000);
+
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          msg.style.color = 'blue';
+          msg.innerText = 'กำลังตรวจสอบ login...';
+
+          if (!liff.isLoggedIn()) {
+            liff.login({ redirectUri: window.location.href });
+            return null;
+          }
+
+          return liff.getProfile();
+        })
+        .then(profile => {
+          if (!profile) return;
+
+          if (profile.userId) {
+            lineUserInput.value = profile.userId;
+            btn.disabled = false;
+            btn.innerText = 'ส่งคำขอ OT';
+            msg.style.color = 'green';
+            msg.innerText = 'เชื่อมต่อ LINE สำเร็จ ✅';
+          } else {
+            lineUserInput.value = 'NO_LINE_USER_ID';
+            btn.disabled = false;
+            btn.innerText = 'ส่งคำขอ OT';
+            msg.style.color = 'orange';
+            msg.innerText = 'ไม่พบ LINE_USER_ID แต่สามารถส่งคำขอได้';
+          }
+        })
+        .catch(err => {
+          console.error('LIFF error:', err);
+          lineUserInput.value = 'NO_LINE_USER_ID';
+          btn.disabled = false;
+          btn.innerText = 'ส่งคำขอ OT';
+          msg.style.color = 'orange';
+          msg.innerText = 'เชื่อมต่อ LINE ไม่สำเร็จ แต่สามารถส่งคำขอได้';
+        });
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (!lineUserInput.value) {
+          lineUserInput.value = 'NO_LINE_USER_ID';
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'กำลังส่ง...';
+        msg.innerText = '';
+
+        const formData = Object.fromEntries(new FormData(form).entries());
+        formData.action = 'submitOT';
+
+        fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            msg.style.color = 'green';
+            msg.innerText = 'ส่งคำขอ OT สำเร็จ เลขที่: ' + data.request_id + ' จำนวน ' + data.hours + ' ชม.';
+            form.reset();
+            lineUserInput.value = formData.line_user_id || 'NO_LINE_USER_ID';
+          } else {
+            msg.style.color = 'red';
+            msg.innerText = 'เกิดข้อผิดพลาด: ' + (data.error || 'ไม่ทราบสาเหตุ');
+          }
+          btn.disabled = false;
+          btn.innerText = 'ส่งคำขอ OT';
+        })
+        .catch(err => {
+          msg.style.color = 'red';
+          msg.innerText = 'เกิดข้อผิดพลาด: ' + err.message;
+          btn.disabled = false;
+          btn.innerText = 'ส่งคำขอ OT';
+        });
+      });
+    </script>
+  </body>
+</html>
